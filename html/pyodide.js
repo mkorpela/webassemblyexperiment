@@ -28,6 +28,10 @@ function updateLogHtml(html) {
     logFrame.src = "data:text/html;charset=utf-8," + iframeContent;
 }
 
+function clearLogHtml() {
+    logFrame.src = "data:text/html;charset=utf-8," + escape("<html><body></body></html>");
+}
+
 function writeToOutput(con_out) {
     std_output = con_out["std_output"]
     if (!std_output) return;
@@ -118,6 +122,7 @@ js.postMessage(json.dumps({"html": html, "std_output": std_output, "finished": T
 
 async function runRobot() {
     clearOutput();
+    clearLogHtml();
 
     await asyncRun(`
     import sys
