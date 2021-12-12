@@ -44,16 +44,15 @@ function clearOutput() {
     output.innerHTML = "";
 }
 
-const pyodideWorker = new Worker("./py_worker.js");
-
 function run(script, context, onSuccess, onError) {
+    const pyodideWorker = new Worker("./py_worker.js");
     console.log(context);
-  pyodideWorker.onerror = onError;
-  pyodideWorker.onmessage = (e) => onSuccess(e.data);
-  pyodideWorker.postMessage({
-    ...context,
-    python: script,
-  });
+    pyodideWorker.onerror = onError;
+    pyodideWorker.onmessage = (e) => onSuccess(e.data);
+    pyodideWorker.postMessage({
+        ...context,
+        python: script,
+    });
 }
 
 // Transform the run (callback) form to a more modern async form.
@@ -82,6 +81,12 @@ const pythonProgram = `
 import sys
 import js
 import json
+import micropip
+await micropip.install('robotframework')
+js.postMessage(json.dumps({"std_output": "Installed Robot Framework"}))
+await micropip.install('robotframework-stacktrace')
+js.postMessage(json.dumps({"std_output": "Installed Robot Framework Stack Trace"}))
+
 from io import StringIO
 from robot import run
 js.postMessage(json.dumps({"std_output": "-- Running Robot Framework --"}))
@@ -122,30 +127,8 @@ js.postMessage(json.dumps({"html": html, "std_output": std_output, "finished": T
 
 async function runRobot() {
     clearOutput();
+    writeToOutput({std_output: "Starting.."});
     clearLogHtml();
-
-    await asyncRun(`
-    import sys
-    import js
-    import json
-    import micropip
-    await micropip.install('robotframework')
-    js.postMessage(json.dumps({"finished": True, "std_output": "Installed Robot Framework"}))
-    `, {}, (data) => {
-        console.log(data)
-        writeToOutput(JSON.parse(data));
-    });
-    await asyncRun(`
-    import sys
-    import js
-    import json
-    await micropip.install('robotframework-stacktrace')
-    js.postMessage(json.dumps({"finished": True, "std_output": "Installed Robot Framework Stack Trace"}))
-    `, {}, (data) => {
-        console.log(data)
-        writeToOutput(JSON.parse(data));
-    });
-
     await asyncRun(pythonProgram, {
         robot_file: robot_file.value,
         resource_file: resource_file.value,
@@ -158,4 +141,5 @@ async function runRobot() {
             updateLogHtml(data["html"]);
         }
     });
+    writeToOutput({std_output: "Ready!"});
 }
