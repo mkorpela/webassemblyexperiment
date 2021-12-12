@@ -9,7 +9,7 @@ async function loadPyodideAndPackages() {
   self.pyodide = await loadPyodide({
     indexURL: "https://cdn.jsdelivr.net/pyodide/v0.18.1/full/",
   });
-  await self.pyodide.loadPackage(["numpy", "pytz"]);
+  await self.pyodide.loadPackage(["micropip"]);
 }
 let pyodideReadyPromise = loadPyodideAndPackages();
 
@@ -20,7 +20,8 @@ self.onmessage = async (event) => {
   const { python, ...context } = event.data;
   // The worker copies the context in its own "memory" (an object mapping name to values)
   for (const key of Object.keys(context)) {
-    self[key] = context[key];
+    console.log(`Setting ${key} to ${context[key]}`);
+    self.pyodide.globals.set(key, context[key]);
   }
   // Now is the easy part, the one that is similar to working in the main thread:
   try {
