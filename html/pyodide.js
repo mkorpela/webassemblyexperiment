@@ -66,47 +66,70 @@ async function init() {
     output.innerHTML += "Ready!\n";
 }
 
+
+const pyodideWorker = new Worker("./py_worker.js");
+
+function run(script, context, onSuccess, onError) {
+  pyodideWorker.onerror = onError;
+  pyodideWorker.onmessage = (e) => onSuccess(e.data);
+  pyodideWorker.postMessage({
+    ...context,
+    python: script,
+  });
+}
+
+// Transform the run (callback) form to a more modern async form.
+// This is what allows to write:
+//    const {results, error} = await asyncRun(script, context);
+// Instead of:
+//    run(script, context, successCallback, errorCallback);
+function asyncRun(script, context) {
+  return new Promise(function (onSuccess, onError) {
+    run(script, context, onSuccess, onError);
+  });
+}
+
+const pythonProgram = `
+import sys
+js.writeToOutput("")
+import time
+
+def write_file(file_content, file_name):
+    with open(file_name,"w") as f:
+        f.writelines(file_content)
+
+write_file(robot_file, "test.robot")
+write_file(resource_file, "keywords.resource")
+write_file(library, "library.py")
+
+sys.__stdout__ = StringIO()
+sys.stdout = sys.__stdout__
+
+class Listener:
+
+    ROBOT_LISTENER_API_VERSION = 2
+
+    def end_keyword(self, name, args):
+        js.writeToOutput(sys.stdout.getvalue());
+
+
+run('test.robot', consolecolors="ansi" , listener=["RobotStackTracer", Listener()], loglevel="TRACE:INFO")
+std_output = sys.__stdout__.getvalue()
+
+with open("log.html","r") as f:
+    html = str(f.read())
+`
+
 async function runRobot() {
     await init();
 
-    pyodide.globals.set("robot_file", robot_file.value);
-    pyodide.globals.set("resource_file", resource_file.value);
-    pyodide.globals.set("library", library.value);
-    try {
-        await pyodide.runPythonAsync(`
-            import sys
-            js.writeToOutput("")
-            import time
+    const result = await asyncRun(pythonProgram, {
+        robot_file: robot_file.value,
+        resource_file: resource_file.value,
+        library: library.value,
+    })
+    console.log(result);
 
-            def write_file(file_content, file_name):
-                with open(file_name,"w") as f:
-                    f.writelines(file_content)
-
-            write_file(robot_file, "test.robot")
-            write_file(resource_file, "keywords.resource")
-            write_file(library, "library.py")
-
-            sys.__stdout__ = StringIO()
-            sys.stdout = sys.__stdout__
-
-            class Listener:
-
-                ROBOT_LISTENER_API_VERSION = 2
-
-                def end_keyword(self, name, args):
-                    js.writeToOutput(sys.stdout.getvalue());
-
-
-            run('test.robot', consolecolors="ansi" , listener=["RobotStackTracer", Listener()], loglevel="TRACE:INFO")
-            std_output = sys.__stdout__.getvalue()
-
-            with open("log.html","r") as f:
-                html = str(f.read())
-            `);
-
-        writeToOutput(pyodide.globals.get("std_output"));
-        updateLogHtml();
-    } catch (err) {
-        console.log(err);
-    }
+    writeToOutput(result);
+    updateLogHtml();
 }
