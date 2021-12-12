@@ -83,7 +83,8 @@ import js
 import json
 import micropip
 await micropip.install('robotframework')
-js.postMessage(json.dumps({"std_output": "Installed Robot Framework"}))
+from robot import __version__
+js.postMessage(json.dumps({"std_output": f"Installed Robot Framework version {__version__}"}))
 await micropip.install('robotframework-stacktrace')
 js.postMessage(json.dumps({"std_output": "Installed Robot Framework Stack Trace"}))
 
@@ -102,6 +103,26 @@ write_file(library, "library.py")
 
 sys.__stdout__ = StringIO()
 sys.stdout = sys.__stdout__
+
+write_file("""
+import json
+import js
+class InPageLibrary:
+
+    def type_text(self, locator, text):
+        js.postMessage(json.dumps({"keyword": "type_text",
+                                   "locator": locator,
+                                   "text": text}))
+    
+    def click(self, locator):
+        js.postMessage(json.dumps({"keyword": "click",
+                                   "locator": locator}))
+   
+    def get_text(self, locator):
+        js.postMessage(json.dumps({"keyword": "get_text",
+                                   "locator": locator}))
+""", "InPageLibrary.py")
+
 
 class Listener:
 
@@ -125,6 +146,24 @@ with open("log.html","r") as f:
 js.postMessage(json.dumps({"html": html, "std_output": std_output, "finished": True}))
 `
 
+const handleKeywordCall = (data) => {
+    const {keyword, locator, text} = data;
+    switch (keyword) {
+        case "type_text":
+            window.document.querySelector(locator).value = text;
+            break;
+        case "click":
+            window.document.querySelector(locator).click();
+            break;
+        case "get_text":
+            console.log(window.document.querySelector(locator).value);
+            //TO DO: return value
+            break;
+        default:
+            console.log("Unknown keyword: " + keyword);
+    }
+}
+
 async function runRobot() {
     clearOutput();
     writeToOutput({std_output: "Starting.."});
@@ -136,6 +175,10 @@ async function runRobot() {
     }, (data) => {
         console.log(data)
         data = JSON.parse(data)
+        if (data.hasOwnProperty("keyword")) {
+            handleKeywordCall(data);
+            return;
+        }
         writeToOutput(data);
         if (data.hasOwnProperty("html")) {
             updateLogHtml(data["html"]);
