@@ -59,8 +59,10 @@ try:
     write_file(inPageLibrary, "InPageLibrary.py")
 
     import CustomLibrary
-
     CustomLibrary = reload(CustomLibrary)
+
+    import InPageLibrary
+    InPageLibrary = reload(InPageLibrary)
 
     try:
         js.postMessage(json.dumps({"std_output": "\n-- Running Robot Framework --\n"}))

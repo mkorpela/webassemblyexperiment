@@ -98,20 +98,46 @@ function asyncRun(script, context, onMessage) {
 
 
 const handleKeywordCall = (data) => {
-    const { keyword, locator, text } = data;
-    switch (keyword) {
+    console.log(data);
+    frame = window.document.getElementById("demoApp")
+    demoApp = frame.contentDocument
+
+    const selector = {
+        xpath: function getElementByXpath(path) {
+            return demoApp.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        },
+        css: function getElementByCss(selector) {
+            return demoApp.querySelector(selector);
+        },
+        id: function getElementById(id) {
+            return demoApp.getElementById(id);
+        }
+    }
+    function getElement(locator) {
+        const [  empty, strategy, selectString ] = locator.split(/(.*?)=(.*)/, 3);
+        console.log(`strategy: ${strategy}`)
+        console.log(`selectString: ${selectString}`)
+        return selector[strategy](selectString);
+    }
+
+
+    switch (data.keyword) {
+        case "open_browser":
+            frame.src = data.url;
+            break;
         case "type_text":
-            window.document.querySelector(locator).value = text;
+            getElement(data.locator).value = data.text;
+            //demoApp.querySelector(data.locator).value = data.text;
             break;
         case "click":
-            window.document.querySelector(locator).click();
+            getElement(data.locator).click();
             break;
         case "get_text":
-            console.log(window.document.querySelector(locator).value);
+            console.log(getElement(data.locator).value);
             //TO DO: return value
             break;
         default:
-            console.log("Unknown keyword: " + keyword);
+            console.log("Unknown keyword: " + data.keyword);
     }
 }
 
