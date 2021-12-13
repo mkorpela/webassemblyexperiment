@@ -16,7 +16,7 @@ function loadFileToPythonProgram() {
 }
 
 function loadFileToInPageLibrary() {
-    fetch('InPageLibrary.py')
+    fetch('Example/InPageLibrary.py')
         .then(response => response.text())
         .then(result => { inPageLibrary = result; });
 }
@@ -33,21 +33,17 @@ function loadFileToValue(fileName, element) {
         .then(result => { element.value = result; });
 }
 
-async function fetchLogHtml() {
-    const response = await fetch('log.html');
-    const frameText = await response.text();
-    logFrame.src = "data:text/html;charset=utf-8," + escape(frameText);
-}
-
 loadFileToPythonProgram();
 loadFileToInPageLibrary();
-loadFileToValue('test.robot', robot_file);
-loadFileToValue('library.py', library);
-loadFileToValue('keywords.resource', resource_file);
-fetchLogHtml()
+loadFileToValue('Example/test.robot', robot_file);
+loadFileToValue('Example/CustomLibrary.py', library);
+loadFileToValue('Example/keywords.resource', resource_file);
+clearLogHtml()
 
 function updateLogHtml(html) {
-    iframeContent = escape(html.replace(/<a href="#"><\/a>/is, ""))
+    iframeContent = escape(html
+        .replace(/<a href="#"><\/a>/is, "")
+        .replace(/\{\{if source\}\}.*?<\/tr>.*?\{\{\/if\}\}/is, ""))
     logFrame.src = "data:text/html;charset=utf-8," + iframeContent;
 }
 
@@ -84,8 +80,8 @@ function run(script, context, onSuccess, onError) {
 // Instead of:
 //    run(script, context, successCallback, errorCallback);
 function asyncRun(script, context, onMessage) {
-        let finished = false;
-      return new Promise((resolve) => {
+    let finished = false;
+    return new Promise((resolve) => {
         run(script, context, (data) => {
             if (data.hasOwnProperty("results")) {
                 console.log("FINISHED");
@@ -97,12 +93,12 @@ function asyncRun(script, context, onMessage) {
                 onMessage(data);
             }
         }, onMessage);
-      });
+    });
 }
 
 
 const handleKeywordCall = (data) => {
-    const {keyword, locator, text} = data;
+    const { keyword, locator, text } = data;
     switch (keyword) {
         case "type_text":
             window.document.querySelector(locator).value = text;
@@ -121,7 +117,7 @@ const handleKeywordCall = (data) => {
 
 async function runRobot() {
     clearOutput();
-    writeToOutput({std_output: "Starting..\n"});
+    writeToOutput({ std_output: "Starting..\n" });
     clearLogHtml();
     await asyncRun(pythonProgram, {
         robot_file: robot_file.value,
@@ -140,5 +136,5 @@ async function runRobot() {
             updateLogHtml(data["html"]);
         }
     });
-    writeToOutput({std_output: "\nReady!"});
+    writeToOutput({ std_output: "\nReady!" });
 }
