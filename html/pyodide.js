@@ -1,26 +1,49 @@
+
 const output = document.getElementById("output");
 const robot_file = document.getElementById("robot_file");
 const resource_file = document.getElementById("resource_file");
 const library = document.getElementById("library");
 const logFrame = document.getElementById('iframe');
 const ansi_up = new AnsiUp;
+var inPageLibrary = new String;
+var pythonProgram = new String;
+const pyodideWorker = new Worker("./py_worker.js");
 
+function loadFileToPythonProgram() {
+    fetch('PythonProgram.py')
+        .then(response => response.text())
+        .then(result => { pythonProgram = result; });
+}
 
-function loadFile(fileName, element) {
+function loadFileToInPageLibrary() {
+    fetch('InPageLibrary.py')
+        .then(response => response.text())
+        .then(result => { inPageLibrary = result; });
+}
+
+function loadFileToVar(fileName, variable) {
     fetch(fileName)
         .then(response => response.text())
-        .then(result => { element.value = result; })
+        .then(result => { variable = result; });
 }
+
+function loadFileToValue(fileName, element) {
+    fetch(fileName)
+        .then(response => response.text())
+        .then(result => { element.value = result; });
+}
+
 async function fetchLogHtml() {
     const response = await fetch('log.html');
     const frameText = await response.text();
     logFrame.src = "data:text/html;charset=utf-8," + escape(frameText);
 }
 
-loadFile('test.robot', robot_file);
-loadFile('library.py', library);
-loadFile('keywords.resource', resource_file);
-
+loadFileToPythonProgram();
+loadFileToInPageLibrary();
+loadFileToValue('test.robot', robot_file);
+loadFileToValue('library.py', library);
+loadFileToValue('keywords.resource', resource_file);
 fetchLogHtml()
 
 function updateLogHtml(html) {
@@ -36,7 +59,7 @@ function writeToOutput(con_out) {
     std_output = con_out["std_output"]
     if (!std_output) return;
     const html = ansi_up.ansi_to_html(std_output);
-    output.innerHTML += "<br>"+html;
+    output.innerHTML += html;
     //console.log(con_out)
 }
 
@@ -45,8 +68,8 @@ function clearOutput() {
 }
 
 function run(script, context, onSuccess, onError) {
-    const pyodideWorker = new Worker("./py_worker.js");
-    console.log(context);
+    //const pyodideWorker = new Worker("./py_worker.js");
+    //console.log(context);
     pyodideWorker.onerror = onError;
     pyodideWorker.onmessage = (e) => onSuccess(e.data);
     pyodideWorker.postMessage({
@@ -66,85 +89,17 @@ function asyncRun(script, context, onMessage) {
         run(script, context, (data) => {
             if (data.hasOwnProperty("results")) {
                 console.log("FINISHED");
-                console.log(data);
+                //console.log(data);
                 resolve(data);
             } else {
-                console.log("MESSAGE");
-                console.log(data);
+                //console.log("MESSAGE");
+                //console.log(data);
                 onMessage(data);
             }
         }, onMessage);
       });
 }
 
-const pythonProgram = `
-import sys
-import js
-import json
-import micropip
-await micropip.install('robotframework')
-from robot import __version__
-js.postMessage(json.dumps({"std_output": f"Installed Robot Framework version {__version__}"}))
-await micropip.install('robotframework-stacktrace')
-js.postMessage(json.dumps({"std_output": "Installed Robot Framework Stack Trace"}))
-
-from io import StringIO
-from robot import run
-js.postMessage(json.dumps({"std_output": "-- Running Robot Framework --"}))
-import time
-
-def write_file(file_content, file_name):
-    with open(file_name,"w") as f:
-        f.writelines(file_content)
-
-write_file(robot_file, "test.robot")
-write_file(resource_file, "keywords.resource")
-write_file(library, "library.py")
-
-sys.__stdout__ = StringIO()
-sys.stdout = sys.__stdout__
-
-write_file("""
-import json
-import js
-class InPageLibrary:
-
-    def type_text(self, locator, text):
-        js.postMessage(json.dumps({"keyword": "type_text",
-                                   "locator": locator,
-                                   "text": text}))
-    
-    def click(self, locator):
-        js.postMessage(json.dumps({"keyword": "click",
-                                   "locator": locator}))
-   
-    def get_text(self, locator):
-        js.postMessage(json.dumps({"keyword": "get_text",
-                                   "locator": locator}))
-""", "InPageLibrary.py")
-
-
-class Listener:
-
-    ROBOT_LISTENER_API_VERSION = 2
-
-    def start_keyword(self, name, args):
-        js.postMessage(json.dumps({"std_output": sys.stdout.getvalue() }))
-        sys.__stdout__.truncate(0)
-
-    def end_keyword(self, name, args):
-        js.postMessage(json.dumps({"std_output": sys.stdout.getvalue() }))
-        sys.__stdout__.truncate(0)
-
-
-run('test.robot', consolecolors="ansi" , listener=["RobotStackTracer", Listener()], loglevel="TRACE:INFO")
-std_output = sys.__stdout__.getvalue()
-
-with open("log.html","r") as f:
-    html = str(f.read())
-
-js.postMessage(json.dumps({"html": html, "std_output": std_output, "finished": True}))
-`
 
 const handleKeywordCall = (data) => {
     const {keyword, locator, text} = data;
@@ -166,14 +121,15 @@ const handleKeywordCall = (data) => {
 
 async function runRobot() {
     clearOutput();
-    writeToOutput({std_output: "Starting.."});
+    writeToOutput({std_output: "Starting..\n"});
     clearLogHtml();
     await asyncRun(pythonProgram, {
         robot_file: robot_file.value,
         resource_file: resource_file.value,
-        library: library.value,
+        library_py: library.value,
+        inPageLibrary: inPageLibrary,
     }, (data) => {
-        console.log(data)
+        //console.log(data)
         data = JSON.parse(data)
         if (data.hasOwnProperty("keyword")) {
             handleKeywordCall(data);
@@ -184,5 +140,5 @@ async function runRobot() {
             updateLogHtml(data["html"]);
         }
     });
-    writeToOutput({std_output: "Ready!"});
+    writeToOutput({std_output: "\nReady!"});
 }

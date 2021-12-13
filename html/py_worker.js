@@ -6,12 +6,18 @@
 importScripts("https://cdn.jsdelivr.net/pyodide/v0.18.1/full/pyodide.js");
 
 async function loadPyodideAndPackages() {
-  self.pyodide = await loadPyodide({
-    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.18.1/full/",
-  });
+  console.log('LOAD Pyodide')
+  let start = Date.now()
+  if (!self.pyodide) {
+    self.pyodide = await loadPyodide({
+      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.18.1/full/",
+    });
+  }
+  console.log(`LOAD Mircopip after ${Date.now() - start}ms`)
   await self.pyodide.loadPackage(["micropip"]);
+  console.log(`DONE after ${Date.now() - start}ms`)
 }
-let pyodideReadyPromise = loadPyodideAndPackages();
+const pyodideReadyPromise = loadPyodideAndPackages();
 
 self.onmessage = async (event) => {
   // make sure loading is done
@@ -20,7 +26,7 @@ self.onmessage = async (event) => {
   const { python, ...context } = event.data;
   // The worker copies the context in its own "memory" (an object mapping name to values)
   for (const key of Object.keys(context)) {
-    console.log(`Setting ${key} to ${context[key]}`);
+    // console.log(`Setting ${key} to ${context[key]}`);
     self.pyodide.globals.set(key, context[key]);
   }
   // Now is the easy part, the one that is similar to working in the main thread:
