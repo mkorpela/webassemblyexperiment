@@ -30,7 +30,7 @@ function loadFileToVar(fileName, variable) {
 function loadFileToValue(fileName, element) {
     fetch(fileName)
         .then(response => response.text())
-        .then(result => { element.value = result; });
+        .then(result => { element.setAttribute("value", result); });
 }
 
 loadFileToPythonProgram();
@@ -146,9 +146,9 @@ async function runRobot() {
     writeToOutput({ std_output: "Starting..\n" });
     clearLogHtml();
     await asyncRun(pythonProgram, {
-        robot_file: robot_file.value,
-        resource_file: resource_file.value,
-        library_py: library.value,
+        robot_file: robot_file.getEditorValue(),
+        resource_file: resource_file.getEditorValue(),
+        library_py: library.getEditorValue(),
         inPageLibrary: inPageLibrary,
     }, (data) => {
         //console.log(data)

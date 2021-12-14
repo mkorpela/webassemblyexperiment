@@ -10,6 +10,7 @@ Test
     Set Username    demo
     Set Password    mode
     Click Login
+    Sleep    1 sec
 
 Failed Test
     Open Demo Page
