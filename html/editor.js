@@ -27,7 +27,9 @@ class MonacoEditor extends HTMLElement {
             }
         }
     }
-
+    setEditorValue(newValue) {
+        this.editor.setValue(newValue);
+    }
     connectedCallback() {
         this._form = this._findContainingForm();
         if (this._form) {
@@ -40,7 +42,166 @@ class MonacoEditor extends HTMLElement {
         // window.editor is accessible.
         var init = () => {
             require(['vs/editor/editor.main'], () => {
-                //console.log(monaco.languages.getLanguages().map(lang => lang.id));
+                monaco.languages.register({ id: 'robot' });
+                monaco.languages.setMonarchTokensProvider('robot', {
+                    defaultToken: 'string',
+                    tokenPostfix: '.robotframework',
+                    ignoreCase: true,
+                    keywords: [
+                        'IF',
+                        'END',
+                        'FOR',
+                        'IN',
+                        'IN RANGE',
+                        'IN ENUMERATE',
+                        'IN ZIP',
+                        'ELSE',
+                        'TRY',
+                        'EXCEPT',
+                        'FINALLY',
+                        'RETURN',
+                    ],
+                    brackets: [
+                        { open: '{', close: '}', token: 'delimiter.curly' },
+                        { open: '[', close: ']', token: 'delimiter.bracket' },
+                        { open: '(', close: ')', token: 'delimiter.parenthesis' }
+                    ],
+                    tokenizer: {
+                        root: [
+                            { include: '@vars' },
+                            { include: '@tables' },
+                            { include: '@setting' },
+                            { include: '@tc_kw_definition' },
+                            { include: '@keyword' },
+                            { include: '@numbers' },
+                            { include: '@strings' },
+                            [/[,:;]/, 'delimiter'],
+                            [/[{}\[\]()]/, '@brackets'],
+                        ],
+                        tables: [
+                            [
+                                /^(\*+ ?(?:settings?|keywords?|variables?|comments?|documentation|tasks?|test cases?)[ *]*)(?= {2,}| ?\t| ?$)/i,
+                                'keyword', '@popall'
+                            ]
+                        ],
+                        setting: [
+                            [/^(?: {2,}| ?\t ?)+\[.*?\]/, 'tag', '@popall']
+                        ],
+                        tc_kw_definition: [
+                            [/^(?! {2,}| ?\t ?).*?(?: {2,}| ?\t ?|$)/, 'type', '@popall']
+                        ],
+                        constant: [
+                            [
+                                /^(?!(?: {2,}| ?\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\t ?)+(.*?)(?= {2,}| ?\t ?| ?$)/,
+                                'constant'
+                            ]
+                        ],
+                        /*vars: [
+                          [/[$&%@]\{/, 'variable.meta.vars1', '@varBody']
+                          //[/\{)/, 'variable.meta.vars1', '@varBody'],
+                        ],*/
+                        vars: [
+                            [/[$&%@](?=\{)/, {
+                                    token: 'variable.meta.vars1',
+                                    next: '@varBody'
+                                }]
+                        ],
+                        varBody: [
+                            [/[$&%@](?=\{)/, 'variable.meta.varBody1', '@varBody'],
+                            [/\{/, 'variable.meta.varBody2', '@varBody'],
+                            [/\}(?=\[)/, 'variable.meta.varBody3', '@dictKey'],
+                            [/\}|\]/, 'variable.meta.varBody4', '@pop'],
+                            [/\n|  /, 'delimiter.meta.varBody5', '@popall'],
+                            [/.*?(?=  |[$&%@]\{|\})/, 'constant.meta.varBody5', '@pop'],
+                        ],
+                        dictKey: [
+                            [/\[/, 'variable.meta.dictKey1'],
+                            [/\]/, 'variable.meta.dictKey2', '@popall'],
+                            [/[$&%@](?=\{)/, 'variable.meta.dictKey3', '@varBody'],
+                            [/\n|  /, 'delimiter.meta.dictKey4', '@popall'],
+                            [/.*?(?=  |[$&%@]\{|\])/, 'constant.meta.dictKey4', '@pop']
+                        ],
+                        keyword: [
+                            [/(?: {2,}| ?\t ?)+(IF|END|FOR|IN|IN RANGE|IN ENUMERATE|IN ZIP|ELSE|TRY|EXCEPT|FINALLY|RETURN)(?= {2,}| ?\t ?|$)/, 'keyword', '@popall'],
+                            [/^(?: {2,}| ?\t ?)+[^@$%&]*?(?= {2,}| ?\t ?| ?$)/, 'meta.keyword1', '@popall'],
+                            [/^(?:(?:(?: {2,}| ?\t ?)(?:[$&@]\{(?:.*?)\}(?: ?=)))*(?: {2,}| ?\t ?))(.+?)(?= {2,}| ?\t ?|$)/, 'meta.keyword2', '@popall'],
+                        ],
+                        // Deal with white space, including single and multi-line comments
+                        /*whitespace: [
+                          [/\s+/, 'white'],
+                          [/(^#.*$)/, 'comment'],
+                          [/('''.*''')|(""".*""")/, 'string'],
+                          [/'''.*$/, 'string', '@endDocString'],
+                          [/""".*$/, 'string', '@endDblDocString']
+                        ],*/
+                        endDocString: [
+                            [/\\'/, 'string'],
+                            [/.*'''/, 'string', '@popall'],
+                            [/.*$/, 'string']
+                        ],
+                        endDblDocString: [
+                            [/\\"/, 'string'],
+                            [/.*"""/, 'string', '@popall'],
+                            [/.*$/, 'string']
+                        ],
+                        // Recognize hex, negatives, decimals, imaginaries, longs, and scientific notation
+                        numbers: [
+                            [/-?0x([abcdef]|[ABCDEF]|\d)+[lL]?/, 'number.hex'],
+                            [/-?(\d*\.)?\d+([eE][+\-]?\d+)?[jJ]?[lL]?/, 'number']
+                        ],
+                        // Recognize strings, including those broken across lines with \ (but not without)
+                        strings: [
+                            [/'$/, 'string.escape', '@popall'],
+                            [/'/, 'string.escape', '@stringBody'],
+                            [/"$/, 'string.escape', '@popall'],
+                            [/"/, 'string.escape', '@dblStringBody']
+                        ],
+                        stringBody: [
+                            [/[^\\']+$/, 'string', '@popall'],
+                            [/[^\\']+/, 'string'],
+                            [/\\./, 'string'],
+                            [/'/, 'string.escape', '@popall'],
+                            [/\\$/, 'string']
+                        ],
+                        dblStringBody: [
+                            [/[^\\"]+$/, 'string', '@popall'],
+                            [/[^\\"]+/, 'string'],
+                            [/\\./, 'string'],
+                            [/"/, 'string.escape', '@popall'],
+                            [/\\$/, 'string']
+                        ]
+                    }
+                });
+                monaco.languages.registerCompletionItemProvider('robot', {
+                    provideCompletionItems: () => {
+                        var suggestions = [
+                            {
+                                label: 'for',
+                                kind: monaco.languages.CompletionItemKind.Snippet,
+                                insertText: 'FOR    ${1:item}    IN    ${2:list}\n    ${1:item}\nEND',
+                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                documentation: 'FOR loop'
+                            },
+                            {
+                                label: 'IF',
+                                kind: monaco.languages.CompletionItemKind.Snippet,
+                                insertText: 'IF    ${1:condition}\n    ${2:body}\nEND',
+                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                documentation: 'IF Statement'
+                            },
+                            {
+                                label: 'IF/ELSE',
+                                kind: monaco.languages.CompletionItemKind.Snippet,
+                                insertText: 'IF    ${1:condition}\n    ${2:body}\nELSE\n    ${3:body}\nEND',
+                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                                documentation: 'IF ELSE Statement'
+                            }
+                        ];
+                        return { suggestions: suggestions };
+                    }
+                });
+
+                console.log(monaco.languages.getLanguages().map(lang => lang.id));
                 // Editor
                 this.editor = monaco.editor.create(editor, {
                     theme: (window.getComputedStyle(document.querySelector("body")).colorScheme === 'dark') ? "vs-dark" : "vs-light",

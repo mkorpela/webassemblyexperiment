@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "monaco-editor": "^0.31.0",
+    "monaco-editor": "^0.31.1",
     "monaco-textmate": "^3.0.1"
   }
 }
