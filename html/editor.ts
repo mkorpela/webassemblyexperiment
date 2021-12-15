@@ -89,23 +89,26 @@ class MonacoEditor extends HTMLElement {
 
                     tokenizer: {
                         root: [
+                            { include: '@comment' },
                             { include: '@vars' },
                             { include: '@tables' },
                             { include: '@setting' },
                             { include: '@tc_kw_definition' },
                             { include: '@keyword' },
                             { include: '@numbers' },
-                            { include: '@strings' },
                             [/[,:;]/, 'delimiter'],
                             [/[{}\[\]()]/, '@brackets'],
 
                         ],
 
-
+                        comment: [
+                            [/(?: {2,}| ?\t ?)#.*/, 'comment'],
+                            [/^#.*/, 'comment']
+                        ],
 
                         tables: [
                             [
-                                /^(\*+ ?(?:settings?|keywords?|variables?|comments?|documentation|tasks?)[ *]*)(?= {2,}| ?\t| ?$)/i,
+                                /^(\*+ ?(?:settings?|keywords?|variables?|comments?|documentation|tasks?|test cases?)[ *]*)(?= {2,}| ?\t| ?$)/,
                                 'keyword', '@popall'
                             ]
                         ],
@@ -125,10 +128,6 @@ class MonacoEditor extends HTMLElement {
                             ]
                         ],
 
-                        /*vars: [
-                          [/[$&%@]\{/, 'variable.meta.vars1', '@varBody']
-                          //[/\{)/, 'variable.meta.vars1', '@varBody'],
-                        ],*/
                         vars: [
                             [/[$&%@](?=\{)/, {
                                 token: 'variable.meta.vars1',
@@ -156,52 +155,10 @@ class MonacoEditor extends HTMLElement {
                             [/^(?: {2,}| ?\t ?)+[^@$%&]*?(?= {2,}| ?\t ?| ?$)/, 'meta.keyword1', '@popall'],
                             [/^(?:(?:(?: {2,}| ?\t ?)(?:[$&@]\{(?:.*?)\}(?: ?=)))*(?: {2,}| ?\t ?))(.+?)(?= {2,}| ?\t ?|$)/, 'meta.keyword2', '@popall'],
                         ],
-
-                        // Deal with white space, including single and multi-line comments
-                        /*whitespace: [
-                          [/\s+/, 'white'],
-                          [/(^#.*$)/, 'comment'],
-                          [/('''.*''')|(""".*""")/, 'string'],
-                          [/'''.*$/, 'string', '@endDocString'],
-                          [/""".*$/, 'string', '@endDblDocString']
-                        ],*/
-                        endDocString: [
-                            [/\\'/, 'string'],
-                            [/.*'''/, 'string', '@popall'],
-                            [/.*$/, 'string']
-                        ],
-                        endDblDocString: [
-                            [/\\"/, 'string'],
-                            [/.*"""/, 'string', '@popall'],
-                            [/.*$/, 'string']
-                        ],
-
                         // Recognize hex, negatives, decimals, imaginaries, longs, and scientific notation
                         numbers: [
                             [/-?0x([abcdef]|[ABCDEF]|\d)+[lL]?/, 'number.hex'],
                             [/-?(\d*\.)?\d+([eE][+\-]?\d+)?[jJ]?[lL]?/, 'number']
-                        ],
-
-                        // Recognize strings, including those broken across lines with \ (but not without)
-                        strings: [
-                            [/'$/, 'string.escape', '@popall'],
-                            [/'/, 'string.escape', '@stringBody'],
-                            [/"$/, 'string.escape', '@popall'],
-                            [/"/, 'string.escape', '@dblStringBody']
-                        ],
-                        stringBody: [
-                            [/[^\\']+$/, 'string', '@popall'],
-                            [/[^\\']+/, 'string'],
-                            [/\\./, 'string'],
-                            [/'/, 'string.escape', '@popall'],
-                            [/\\$/, 'string']
-                        ],
-                        dblStringBody: [
-                            [/[^\\"]+$/, 'string', '@popall'],
-                            [/[^\\"]+/, 'string'],
-                            [/\\./, 'string'],
-                            [/"/, 'string.escape', '@popall'],
-                            [/\\$/, 'string']
                         ]
                     }
                 });

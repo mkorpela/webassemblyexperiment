@@ -68,19 +68,23 @@ class MonacoEditor extends HTMLElement {
                     ],
                     tokenizer: {
                         root: [
+                            { include: '@comment' },
                             { include: '@vars' },
                             { include: '@tables' },
                             { include: '@setting' },
                             { include: '@tc_kw_definition' },
                             { include: '@keyword' },
                             { include: '@numbers' },
-                            { include: '@strings' },
                             [/[,:;]/, 'delimiter'],
                             [/[{}\[\]()]/, '@brackets'],
                         ],
+                        comment: [
+                            [/(?: {2,}| ?\t ?)#.*/, 'comment'],
+                            [/^#.*/, 'comment']
+                        ],
                         tables: [
                             [
-                                /^(\*+ ?(?:settings?|keywords?|variables?|comments?|documentation|tasks?|test cases?)[ *]*)(?= {2,}| ?\t| ?$)/i,
+                                /^(\*+ ?(?:settings?|keywords?|variables?|comments?|documentation|tasks?|test cases?)[ *]*)(?= {2,}| ?\t| ?$)/,
                                 'keyword', '@popall'
                             ]
                         ],
@@ -96,10 +100,6 @@ class MonacoEditor extends HTMLElement {
                                 'constant'
                             ]
                         ],
-                        /*vars: [
-                          [/[$&%@]\{/, 'variable.meta.vars1', '@varBody']
-                          //[/\{)/, 'variable.meta.vars1', '@varBody'],
-                        ],*/
                         vars: [
                             [/[$&%@](?=\{)/, {
                                     token: 'variable.meta.vars1',
@@ -126,81 +126,13 @@ class MonacoEditor extends HTMLElement {
                             [/^(?: {2,}| ?\t ?)+[^@$%&]*?(?= {2,}| ?\t ?| ?$)/, 'meta.keyword1', '@popall'],
                             [/^(?:(?:(?: {2,}| ?\t ?)(?:[$&@]\{(?:.*?)\}(?: ?=)))*(?: {2,}| ?\t ?))(.+?)(?= {2,}| ?\t ?|$)/, 'meta.keyword2', '@popall'],
                         ],
-                        // Deal with white space, including single and multi-line comments
-                        /*whitespace: [
-                          [/\s+/, 'white'],
-                          [/(^#.*$)/, 'comment'],
-                          [/('''.*''')|(""".*""")/, 'string'],
-                          [/'''.*$/, 'string', '@endDocString'],
-                          [/""".*$/, 'string', '@endDblDocString']
-                        ],*/
-                        endDocString: [
-                            [/\\'/, 'string'],
-                            [/.*'''/, 'string', '@popall'],
-                            [/.*$/, 'string']
-                        ],
-                        endDblDocString: [
-                            [/\\"/, 'string'],
-                            [/.*"""/, 'string', '@popall'],
-                            [/.*$/, 'string']
-                        ],
                         // Recognize hex, negatives, decimals, imaginaries, longs, and scientific notation
                         numbers: [
                             [/-?0x([abcdef]|[ABCDEF]|\d)+[lL]?/, 'number.hex'],
                             [/-?(\d*\.)?\d+([eE][+\-]?\d+)?[jJ]?[lL]?/, 'number']
-                        ],
-                        // Recognize strings, including those broken across lines with \ (but not without)
-                        strings: [
-                            [/'$/, 'string.escape', '@popall'],
-                            [/'/, 'string.escape', '@stringBody'],
-                            [/"$/, 'string.escape', '@popall'],
-                            [/"/, 'string.escape', '@dblStringBody']
-                        ],
-                        stringBody: [
-                            [/[^\\']+$/, 'string', '@popall'],
-                            [/[^\\']+/, 'string'],
-                            [/\\./, 'string'],
-                            [/'/, 'string.escape', '@popall'],
-                            [/\\$/, 'string']
-                        ],
-                        dblStringBody: [
-                            [/[^\\"]+$/, 'string', '@popall'],
-                            [/[^\\"]+/, 'string'],
-                            [/\\./, 'string'],
-                            [/"/, 'string.escape', '@popall'],
-                            [/\\$/, 'string']
                         ]
                     }
                 });
-                monaco.languages.registerCompletionItemProvider('robot', {
-                    provideCompletionItems: () => {
-                        var suggestions = [
-                            {
-                                label: 'for',
-                                kind: monaco.languages.CompletionItemKind.Snippet,
-                                insertText: 'FOR    ${1:item}    IN    ${2:list}\n    ${1:item}\nEND',
-                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                                documentation: 'FOR loop'
-                            },
-                            {
-                                label: 'IF',
-                                kind: monaco.languages.CompletionItemKind.Snippet,
-                                insertText: 'IF    ${1:condition}\n    ${2:body}\nEND',
-                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                                documentation: 'IF Statement'
-                            },
-                            {
-                                label: 'IF/ELSE',
-                                kind: monaco.languages.CompletionItemKind.Snippet,
-                                insertText: 'IF    ${1:condition}\n    ${2:body}\nELSE\n    ${3:body}\nEND',
-                                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                                documentation: 'IF ELSE Statement'
-                            }
-                        ];
-                        return { suggestions: suggestions };
-                    }
-                });
-
                 console.log(monaco.languages.getLanguages().map(lang => lang.id));
                 // Editor
                 this.editor = monaco.editor.create(editor, {
