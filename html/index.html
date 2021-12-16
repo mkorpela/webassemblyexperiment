@@ -86,20 +86,25 @@
 </head>
 
 <body>
+    <select id="example_selection" onchange="updateFolder(this)">
+        <option value="Example">Example</option>
+        <option value="Example1">Example1</option>
+    </select>
+
     <table>
         <tbody>
             <tr>
                 <td>
                     <div>test.robot:</div>
-                    <monaco-editor language="robot" id="robot_file" rows="20"></monaco-editor>
+                    <monaco-editor language="robot" id="robot_file" file="test.robot"></monaco-editor>
                 </td>
                 <td>
                     <div>keywords.resource:</div>
-                    <monaco-editor language="robot" id="resource_file" rows="20"></monaco-editor>
+                    <monaco-editor language="robot" id="resource_file" file="keywords.resource"></monaco-editor>
                 </td>
                 <td>
                     <div>CustomLibrary.py:</div>
-                    <monaco-editor language="python" id="library" rows="20"></monaco-editor>
+                    <monaco-editor language="python" id="library_file" file="CustomLibrary.py"></monaco-editor>
                 </td>
             </tr>
         </tbody>

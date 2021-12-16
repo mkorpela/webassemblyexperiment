@@ -5,6 +5,10 @@ Force Tags        INCL
 
 
 *** Test Cases ***
+Log Python Keywords
+    ${ret}=    My Keyword    WORLD
+    Log To Console    ${ret}
+
 Test
     Open Demo Page
     Set Username    demo

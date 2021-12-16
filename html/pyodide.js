@@ -1,13 +1,46 @@
+const fileList = [
+    'InPageLibrary.py'
+]
+var folderName = 'Example'
 
 const output = document.getElementById("output");
-const robot_file = document.getElementById("robot_file");
-const resource_file = document.getElementById("resource_file");
-const library = document.getElementById("library");
+const editorElements = document.getElementsByTagName("monaco-editor");
 const logFrame = document.getElementById('iframe');
 const ansi_up = new AnsiUp;
-var inPageLibrary = new String;
 var pythonProgram = new String;
 const pyodideWorker = new Worker("./py_worker.js");
+var fileCatalog = new Object();
+
+function updateFolder(el){
+    updateEditors(el.value);
+}
+
+
+function updateEditors(folder){
+    folderName = folder
+    for (let editorElement of editorElements) {
+        loadFileToValue(folder, editorElement);
+    }
+    initializeFileCatalog(folder);
+}
+
+function initializeFileCatalog(folder) {
+    for (let fileName of fileList) {
+        addFileToFileCatalog(folder, fileName);
+    }
+}
+
+function updateFileCatalog() {
+    for (let editorElement of editorElements) {
+        fileCatalog[editorElement.getAttribute('file')] = editorElement.getEditorValue()
+    }
+}
+
+function addFileToFileCatalog(folder, fileName) {
+    fetch(folder + "/" + fileName)
+        .then(response => response.text())
+        .then(result => { fileCatalog[fileName] = result; });
+}
 
 function loadFileToPythonProgram() {
     fetch('PythonProgram.py')
@@ -15,29 +48,17 @@ function loadFileToPythonProgram() {
         .then(result => { pythonProgram = result; });
 }
 
-function loadFileToInPageLibrary() {
-    fetch('Example/InPageLibrary.py')
-        .then(response => response.text())
-        .then(result => { inPageLibrary = result; });
-}
-
-function loadFileToVar(fileName, variable) {
-    fetch(fileName)
-        .then(response => response.text())
-        .then(result => { variable = result; });
-}
-
-function loadFileToValue(fileName, element) {
+function loadFileToValue(folder, element) {
+    const fileName = folder + "/" + element.getAttribute("file");
+    console.log(`Loading ${fileName} to element ${element.id}`);
     fetch(fileName)
         .then(response => response.text())
         .then(result => { element.setAttribute("value", result); });
 }
 
+
 loadFileToPythonProgram();
-loadFileToInPageLibrary();
-loadFileToValue('Example/test.robot', robot_file);
-loadFileToValue('Example/CustomLibrary.py', library);
-loadFileToValue('Example/keywords.resource', resource_file);
+updateEditors(folderName);
 clearLogHtml()
 
 function updateLogHtml(html) {
@@ -64,8 +85,6 @@ function clearOutput() {
 }
 
 function run(script, context, onSuccess, onError) {
-    //const pyodideWorker = new Worker("./py_worker.js");
-    //console.log(context);
     pyodideWorker.onerror = onError;
     pyodideWorker.onmessage = (e) => onSuccess(e.data);
     pyodideWorker.postMessage({
@@ -145,13 +164,9 @@ async function runRobot() {
     clearOutput();
     writeToOutput({ std_output: "Starting..\n" });
     clearLogHtml();
-    await asyncRun(pythonProgram, {
-        robot_file: robot_file.getEditorValue(),
-        resource_file: resource_file.getEditorValue(),
-        library_py: library.getEditorValue(),
-        inPageLibrary: inPageLibrary,
-    }, (data) => {
-        //console.log(data)
+    updateFileCatalog();
+    await asyncRun(pythonProgram, {file_catalog: JSON.stringify(fileCatalog)}, (data) => {
+        //console.log(data)   logging all data coming back
         data = JSON.parse(data)
         if (data.hasOwnProperty("keyword")) {
             handleKeywordCall(data);

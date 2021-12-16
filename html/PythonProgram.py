@@ -4,11 +4,10 @@ import js
 import json
 import os
 
-from importlib import reload
+from importlib import import_module, reload
 from io import StringIO
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(""))))
-
 
 class Listener:
 
@@ -49,20 +48,22 @@ except ImportError:
 
 try:
 
-    def write_file(file_content, file_name):
+    def write_file(file_name, file_content):
         with open(file_name, "w") as f:
             f.writelines(file_content)
 
-    write_file(robot_file, "test.robot")
-    write_file(resource_file, "keywords.resource")
-    write_file(library_py, "CustomLibrary.py")
-    write_file(inPageLibrary, "InPageLibrary.py")
+    file_catalog_dict = json.loads(file_catalog)
 
-    import CustomLibrary
-    CustomLibrary = reload(CustomLibrary)
+    for name, content in file_catalog_dict.items():
+        write_file(name, content)
 
-    import InPageLibrary
-    InPageLibrary = reload(InPageLibrary)
+
+    for name in file_catalog_dict:
+        file_name, file_ext = os.path.splitext(name)
+        if file_ext == ".py":
+            m = import_module(file_name)
+            m = reload(m)
+
 
     try:
         js.postMessage(json.dumps({"std_output": "\n-- Running Robot Framework --\n"}))
@@ -101,4 +102,5 @@ try:
         )
 
 except Exception as e:
+    print("Exception:")
     print(e)
