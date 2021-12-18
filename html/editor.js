@@ -19,6 +19,127 @@ require(['vs/editor/editor.main'], () => {
     });
     monaco.editor.setTheme('rf-dark');
     monaco.languages.register({ id: 'robot' });
+
+    function createKeywordProposals(range) {
+        // returning a static list of proposals, not even looking at the prefix (filtering is done by the Monaco editor),
+        // here you could do a server side lookup
+        return [
+            {
+                label: 'Log To Console',
+                kind: monaco.languages.CompletionItemKind.Function,
+                documentation: 'This does what it does',
+                insertText: 'Log To Console',
+                range: range
+            },
+            {
+                label: 'Log',
+                kind: monaco.languages.CompletionItemKind.Function,
+                documentation: 'Fast, unopinionated, minimalist web framework',
+                insertText: 'Log',
+                range: range
+            },
+            {
+                label: 'Should Be Equal',
+                kind: monaco.languages.CompletionItemKind.Function,
+                documentation: 'Recursively mkdir, like <code>mkdir -p</code>',
+                insertText: 'Should Be Equal',
+                range: range
+            },
+            {
+                label: 'IF',
+                kind: monaco.languages.CompletionItemKind.Function,
+                documentation: 'Describe your library here',
+                insertText: 'IF    ${1:Condition}\n    ${2:body}\nEND',
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                range: range
+            }
+        ];
+    }
+
+    function createTablesProposals(value, range) {
+        console.log(range)
+        function getTableProp(name) {
+            return {
+                label: name,
+                kind: monaco.languages.CompletionItemKind.Function,
+                documentation: '',
+                insertText: name,
+                range: {
+                    startLineNumber: range.startLineNumber,
+                    endLineNumber: range.endLineNumber,
+                    startColumn: 1,
+                    endColumn: 1
+                }
+            }
+        }
+        const tables = [
+            '*** Settings ***',
+            '*** Test Cases ***',
+            '*** Keywords ***',
+            '*** Comments ***',
+            '*** Tasks ***'
+        ];
+
+        var proposals = [];
+        for (let table of tables) {
+            if (!value.includes(table)) {
+                proposals.push(getTableProp(table));
+            }
+        }
+        return proposals;
+    }
+
+    monaco.languages.registerCompletionItemProvider('robot', {
+        provideCompletionItems: function (model, position) {
+
+            console.log(model);
+
+            var textUntilPosition = model.getValueInRange({
+                startLineNumber: position.lineNumber,
+                startColumn: 1,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column
+            });
+            console.log(textUntilPosition);
+            var keyword = textUntilPosition.match(
+                /^(?: {2,}| ?\t ?)+([$&%@]\{.*?\} ?=?(?: {2,}| ?\t ?))?.*/
+            );
+            var linestart = textUntilPosition.match(
+                /^(?! {2,}| ?\t ?).*/
+            );
+            if (!keyword && !linestart) {
+                return { suggestions: [] };
+            }
+            if (linestart) {
+                var word = model.getWordUntilPosition(position);
+                var range = {
+                    startLineNumber: position.lineNumber,
+                    endLineNumber: position.lineNumber,
+                    startColumn: word.startColumn,
+                    endColumn: word.endColumn
+                };
+                return {
+                    suggestions: createTablesProposals(model.getValue(), range)
+                };
+            }
+
+            if (keyword) {
+                var word = model.getWordUntilPosition(position);
+                var range = {
+                    startLineNumber: position.lineNumber,
+                    endLineNumber: position.lineNumber,
+                    startColumn: word.startColumn,
+                    endColumn: word.endColumn
+                };
+                return {
+                    suggestions: createKeywordProposals(range)
+                };
+            }
+        }
+    });
+
+
+
     monaco.languages.setMonarchTokensProvider('robot', {
         defaultToken: 'string',
         tokenPostfix: '.robotframework',

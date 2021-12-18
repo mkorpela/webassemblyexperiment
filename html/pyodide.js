@@ -8,6 +8,7 @@ const editorElements = document.getElementsByTagName("monaco-editor");
 const logFrame = document.getElementById('iframe');
 const ansi_up = new AnsiUp;
 var pythonProgram = new String;
+var libDoc = new String;
 var pyodideWorker = null;
 var fileCatalog = new Object();
 
@@ -79,6 +80,12 @@ function loadFileToPythonProgram() {
         .then(result => { pythonProgram = result; });
 }
 
+function loadFileToLibDoc() {
+    fetch('LibDoc.py')
+        .then(response => response.text())
+        .then(result => { libDoc = result; });
+}
+
 function loadFileToValue(folder, element) {
     const fileName = folder + "/" + element.getAttribute("file");
     console.log(`Loading ${fileName} to element ${element.id}`);
@@ -144,7 +151,7 @@ function asyncRun(script, context, onMessage) {
     });
 }
 
-
+loadFileToLibDoc();
 loadFileToPythonProgram();
 if ((new URL(document.location)).searchParams.get('fileCatalog')) {
     updateEditorsFromURL();
@@ -215,4 +222,20 @@ async function runRobot() {
         }
     });
     writeToOutput({ std_output: "\nReady!" });
+}
+
+async function runLibDoc() {
+    updateFileCatalog();
+    await asyncRun(libDoc, {file_catalog: JSON.stringify(fileCatalog)}, (data) => {
+        console.log(data)
+        // data = JSON.parse(data)
+        // if (data.hasOwnProperty("keyword")) {
+        //     handleKeywordCall(data);
+        //     return;
+        // }
+        // writeToOutput(data);
+        // if (data.hasOwnProperty("html")) {
+        //     updateLogHtml(data["html"]);
+        // }
+    });
 }

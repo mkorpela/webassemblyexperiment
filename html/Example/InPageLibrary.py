@@ -3,11 +3,8 @@ import js
 
 
 class InPageLibrary:
-
     def open_browser(self, url):
-        js.postMessage(
-            json.dumps({"keyword": "open_browser", "url": url})
-        )
+        js.postMessage(json.dumps({"keyword": "open_browser", "url": url}))
 
     def type_text(self, locator, text):
         js.postMessage(

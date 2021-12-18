@@ -20,16 +20,11 @@ async function loadPyodideAndPackages() {
 const pyodideReadyPromise = loadPyodideAndPackages();
 
 self.onmessage = async (event) => {
-  // make sure loading is done
   await pyodideReadyPromise;
-  // Don't bother yet with this line, suppose our API is built in such a way:
   const { python, ...context } = event.data;
-  // The worker copies the context in its own "memory" (an object mapping name to values)
   for (const key of Object.keys(context)) {
-    // console.log(`Setting ${key} to ${context[key]}`);
     self.pyodide.globals.set(key, context[key]);
   }
-  // Now is the easy part, the one that is similar to working in the main thread:
   try {
     await self.pyodide.loadPackagesFromImports(python);
     let results = await self.pyodide.runPythonAsync(python);

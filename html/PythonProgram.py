@@ -10,6 +10,7 @@ from io import StringIO
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(""))))
 
+
 class Listener:
 
     ROBOT_LISTENER_API_VERSION = 2
@@ -82,7 +83,7 @@ try:
             consolecolors="ansi",
             listener=["RobotStackTracer", Listener()],
             loglevel="TRACE:INFO",
-            #include="INCL",
+            # include="INCL",
             exclude="EXCL",
             skip="SKIP",
             removekeywords="tag:REMOVE",
