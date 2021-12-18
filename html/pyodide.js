@@ -8,13 +8,13 @@ const editorElements = document.getElementsByTagName("monaco-editor");
 const logFrame = document.getElementById('iframe');
 const ansi_up = new AnsiUp;
 var pythonProgram = new String;
-const pyodideWorker = new Worker("./py_worker.js");
+var pyodideWorker = null;
 var fileCatalog = new Object();
+
 
 function updateFolder(el){
     updateEditors(el.value);
 }
-
 
 function updateEditors(folder){
     folderName = folder
@@ -23,6 +23,20 @@ function updateEditors(folder){
     }
     initializeFileCatalog(folder);
 }
+
+function updateEditorsFromURL(){
+    urlCatalog = LZString.decompressFromEncodedURIComponent((new URL(document.location)).searchParams.get('fileCatalog'));
+    console.log(urlCatalog)
+    if (urlCatalog !== "") {
+        fileCatalog = JSON.parse(urlCatalog);
+    }
+    for (let editorElement of editorElements) {
+        console.log(`Loading ${editorElement.getAttribute('file')} to element ${editorElement.id}`);
+        editorElement.setAttribute("value", fileCatalog[editorElement.getAttribute('file')]);
+        console.log(fileCatalog[editorElement.getAttribute('file')]);
+    }
+}
+
 
 function initializeFileCatalog(folder) {
     for (let fileName of fileList) {
@@ -34,6 +48,23 @@ function updateFileCatalog() {
     for (let editorElement of editorElements) {
         fileCatalog[editorElement.getAttribute('file')] = editorElement.getEditorValue()
     }
+}
+
+async function copyFileCatalog() {
+    updateFileCatalog()
+    fileCatalog['InPageLibrary.py'] = ""
+    var strCat = JSON.stringify(fileCatalog);
+    console.log(strCat)
+
+    console.log("Size of fileCatalog is: " + strCat.length);
+    var baseCat = btoa(strCat);
+    console.log("Size of Base 64 fileCatalog is: " + baseCat.length);
+    var comRaw = LZString.compress(strCat);
+    console.log(`Size of compressed fileCatalog is: ${comRaw.length} (${comRaw.length/(strCat.length/100)}%)`);
+    var comCat = LZString.compressToEncodedURIComponent(strCat);
+    console.log(`Size of compressed Base 64 fileCatalog is: ${comCat.length} (${comCat.length/(baseCat.length/100)}%)`);
+    console.log(comCat)
+    await navigator.clipboard.writeText(document.location.origin + "/?fileCatalog=" + comCat);
 }
 
 function addFileToFileCatalog(folder, fileName) {
@@ -55,11 +86,6 @@ function loadFileToValue(folder, element) {
         .then(response => response.text())
         .then(result => { element.setAttribute("value", result); });
 }
-
-
-loadFileToPythonProgram();
-updateEditors(folderName);
-clearLogHtml()
 
 function updateLogHtml(html) {
     iframeContent = escape(html
@@ -85,6 +111,9 @@ function clearOutput() {
 }
 
 function run(script, context, onSuccess, onError) {
+    if (!pyodideWorker) {
+        pyodideWorker = new Worker("./py_worker.js");
+    }
     pyodideWorker.onerror = onError;
     pyodideWorker.onmessage = (e) => onSuccess(e.data);
     pyodideWorker.postMessage({
@@ -115,6 +144,14 @@ function asyncRun(script, context, onMessage) {
     });
 }
 
+
+loadFileToPythonProgram();
+if ((new URL(document.location)).searchParams.get('fileCatalog')) {
+    updateEditorsFromURL();
+} else {
+    updateEditors(folderName);
+}
+clearLogHtml()
 
 const handleKeywordCall = (data) => {
     console.log(data);

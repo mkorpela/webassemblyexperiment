@@ -7,7 +7,7 @@ Force Tags        INCL
 *** Test Cases ***
 Log Python Keywords
     ${ret}=    My Keyword    WORLD
-    Log To Console    ${ret}
+    Log To Console    ${ret}   sdfsdf sdfsdf   sdfsdf
 
 Test
     Open Demo Page
@@ -22,3 +22,5 @@ Failed Test
     Set Password    Wrong
     Click Login
     Fail    faked Fail...
+
+

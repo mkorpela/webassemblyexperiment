@@ -3,6 +3,7 @@ import sys
 import js
 import json
 import os
+import traceback
 
 from importlib import import_module, reload
 from io import StringIO
@@ -57,20 +58,12 @@ try:
     for name, content in file_catalog_dict.items():
         write_file(name, content)
 
-
-    for name in file_catalog_dict:
-        file_name, file_ext = os.path.splitext(name)
-        if file_ext == ".py":
-            m = import_module(file_name)
-            m = reload(m)
-
-
     try:
         js.postMessage(json.dumps({"std_output": "\n-- Running Robot Framework --\n"}))
         js.postMessage(
             json.dumps(
                 {
-                    "std_output": f"> robot --loglevel TRACE:INFO --include INCL --exclude EXCL --skip SKIP\n"
+                    "std_output": f"> robot --loglevel TRACE:INFO --exclude EXCL --skip SKIP\n"
                     f"  --removekeywords tag:REMOVE --flattenkeywords tag:FLAT test.robot\n"
                 }
             )
@@ -79,19 +72,26 @@ try:
         org_stderr = sys.__stderr__
         sys.stdout = sys.__stdout__ = StringIO()
         sys.stderr = sys.__stderr__ = sys.__stdout__
+        for name in file_catalog_dict:
+            file_name, file_ext = os.path.splitext(name)
+            if file_ext == ".py":
+                m = import_module(file_name)
+                m = reload(m)
         run(
             "test.robot",
             consolecolors="ansi",
             listener=["RobotStackTracer", Listener()],
             loglevel="TRACE:INFO",
-            include="INCL",
+            #include="INCL",
             exclude="EXCL",
             skip="SKIP",
             removekeywords="tag:REMOVE",
             flattenkeywords="tag:FLAT",
         )
-        std_output = sys.__stdout__.getvalue()
+    except Exception as e:
+        traceback.print_exc(file=sys.__stdout__)
     finally:
+        std_output = sys.__stdout__.getvalue()
         sys.__stdout__ = org_stdout
         sys.stdout = sys.__stdout__
 
@@ -103,4 +103,5 @@ try:
 
 except Exception as e:
     print("Exception:")
+    traceback.print_exc()
     print(e)
