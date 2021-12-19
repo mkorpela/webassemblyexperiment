@@ -7,10 +7,10 @@ const output = document.getElementById("output");
 const editorElements = document.getElementsByTagName("monaco-editor");
 const logFrame = document.getElementById('iframe');
 const ansi_up = new AnsiUp;
-var pythonProgram = new String;
-var libDoc = new String;
+var pythonProgram = '';
+var libDoc = '';
 var pyodideWorker = null;
-var fileCatalog = new Object();
+var fileCatalog = {};
 
 
 function updateFolder(el){
